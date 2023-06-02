@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ejemplo de consulta Prolog en HTML</title>
+  <script src="tau-prolog.js"></script>
+</head>
+<body>
+  <h1>Consulta Prolog en HTML</h1>
+
+  <label for="presupuesto">Presupuesto:</label>
+  <input type="number" id="presupuesto">
+  <button onclick="realizarConsulta()">Realizar consulta</button>
+
+  <div id="resultado"></div>
+
+  <script>
+    function realizarConsulta() {
+      var presupuesto = document.getElementById("presupuesto").value;
+
+      // Crear un motor Prolog con Tau Prolog
+      var session = pl.create();
+
+      // Cargar el programa Prolog
+      var programa = `
+        :- op(500, xfx, costo).
+        :- op(500, xfx, tiene).
+
+        costo(piso_madera, 100).
+        costo(piso_ceramico, 80).
+        costo(piso_porcelanato, 120).
+        costo(ventanas_madera, 200).
+        costo(ventanas_aluminio, 150).
+        costo(ventanas_pvc, 180).
+        costo(pintura_interior, 50).
+        costo(pintura_exterior, 80).
+        costo(clima_artificial, 300).
+        costo(diseño_moderno, 200).
+        costo(diseño_clásico, 150).
+        costo(jardín, 120).
+        costo(piscina, 300).
+
+        construccion(Presupuesto, Caracteristicas) :-
+            construccion_recursiva(Presupuesto, [], Caracteristicas).
+
+        construccion_recursiva(Presupuesto, Acc, Caracteristicas) :-
+            costo(Caracteristica, Costo),
+            Costo =< Presupuesto,
+            \+ member(Caracteristica, Acc),
+            PresupuestoRestante is Presupuesto - Costo,
+            construccion_recursiva(PresupuestoRestante, [Caracteristica | Acc], Caracteristicas).
+
+        construccion_recursiva(_, Caracteristicas, Caracteristicas).
+      `;
+
+      session.consult(programa);
+
+      // Realizar la consulta
+      var consulta = "construccion(" + presupuesto + ", Caracteristicas).";
+      var soluciones = [];
+
+      // Obtener todas las soluciones posibles
+      session.query(consulta, {
+        success: function(goal) {
+          session.answers(x => {
+            var caracteristicas = x.lookup("Caracteristicas");
+            soluciones.push(caracteristicas);
+          });
+          mostrarResultado(soluciones);
+        },
+        error: function() {
+          mostrarResultado([]);
+        }
+      });
+    }
+
+    function mostrarResultado(soluciones) {
+      var resultadoDiv = document.getElementById("resultado");
+      if (soluciones.length === 0) {
+        resultadoDiv.innerHTML = "No se encontraron características para el presupuesto indicado.";
+      } else {
+        var caracteristicas = soluciones.join("<br>");
+        resultadoDiv.innerHTML = caracteristicas;
+      }
+    }
+  </script>
+</body>
+</html>
